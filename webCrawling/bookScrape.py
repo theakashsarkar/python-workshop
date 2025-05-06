@@ -59,3 +59,17 @@ product_description = re.compile(r'<th>(.*?)</th><td>(.*?)</td>')
 result = product_description.findall(text)
 for item in result:
   print(item)
+
+import csv
+
+field_name = ["Name", "Author", "Publisher", "Price", "Category"]
+book1 = ["Computer Programming part 1", "Tamim Shahriar Subeen", "Onnorokom Prokashoni", "240.00", "Programming"]
+book2 = ["Computer Programming part 2", "Tamim Shahriar Subeen", "Onnorokom Prokashoni", "250.00", "Programming"]
+book3 = ["Computer Programming part 3", "Tamim Shahriar Subeen", "Onnorokom Prokashoni", "200.00", "Programming"]
+
+book_list = [book1, book2, book3]
+with open("books.csv","w") as csvf:
+    csv_writer = csv.writer(csvf, delimiter=',', quotechar="\"", quoting=csv.QUOTE_MINIMAL)
+    csv_writer.writerow(field_name)
+    for book1 in book_list:
+        csv_writer.writerow(book1)
