@@ -1,2 +1,2 @@
-05/06/2025 08:33:11 PM - DEBUG - Starting new HTTPS connection (1): books.toscrape.com:443
-05/06/2025 08:33:12 PM - DEBUG - https://books.toscrape.com:443 "GET /index.html HTTP/1.1" 200 51294
+05/06/2025 11:31:45 PM - DEBUG - Starting new HTTPS connection (1): books.toscrape.com:443
+05/06/2025 11:31:46 PM - DEBUG - https://books.toscrape.com:443 "GET /index.html HTTP/1.1" 200 51294
