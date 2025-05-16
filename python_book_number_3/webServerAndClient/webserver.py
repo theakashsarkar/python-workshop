@@ -1,3 +1,4 @@
+from calendar import c
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from dataclasses import dataclass
 from urllib.parse import urlparse, parse_qs
@@ -18,29 +19,50 @@ class SimpleServer(BaseHTTPRequestHandler):
     
     CONTENT_TYPE_HTML = "text/html"
 
-
-    
     @classmethod
     def set_api_key(cls, username, password):
       key_str = '{}:{}'.format(username, password)
       cls.key = base64.b64encode(key_str.encode('utf-8')).decode()
+    
     def _send_400(self, message: str = ''):
       self.send_response(400)
-      self.send_header("Content-type", CONTENT_TYPE_HTML)
+      self.send_header("Content-type", self.CONTENT_TYPE_HTML)
       self.end_headers()
-      self.wfile.write(message.encode())
+      if message:
+        self.wfile.write(message.encode())
     
     def _send_200(self, message: str = ''):
       self.send_response(200)
-      self.send_header("Content-type", CONTENT_TYPE_HTML)
+      self.send_header("Content-type", self.CONTENT_TYPE_HTML)
       self.end_headers()
-      self.wfile.write(message.encode())
+      if message:
+        self.wfile.write(message.encode())
     
     def _send_unauthorized(self, message: str = ''):
       self.send_response(401)
-      self.send_header("Content-type", CONTENT_TYPE_HTML)
+      self.send_header("Content-type", self.CONTENT_TYPE_HTML)
       self.end_headers()
-      self.wfile.write(message.encode())
+      if message:
+        self.wfile.write(message.encode())
+    
+    def check_authorized(func):
+      def check(self):
+        try:
+          api_key = self.key
+          if self.headers.get('Authorization') == None:
+            return self._send_unauthorized("Missing auth header")
+          elif self.headers.get('Authorization') != 'Basic {}'.format(api_key):
+            return self._send_unauthorized("Wrong username/password")
+          return func(self)
+        except Exception as e:
+          self._send_400(f"Server error: {str(e)}")
+          return
+      return check
+    
+    def _request_data(self):
+      content_length = int(self.headers['Content-Length'])
+      post_data = self.rfile.read(content_length)
+      return post_data
 
     def do_GET(self):
         parsed_url = urlparse(self.path)
@@ -64,26 +86,23 @@ class SimpleServer(BaseHTTPRequestHandler):
          html_content = "<html><body><h1>Invalid id</h1></body></html>"
          self.wfile.write(bytes(html_content, "utf-8"))
 
+    @check_authorized
     def do_POST(self):
-      api_key = SimpleServer.key
-      if self.headers.get('Authorization') == None:
-        return self._send_unauthorized("Missing auth header")
-      elif self.headers.get('Authorization') != "Basic {}".format(api_key):
-        return self._send_unauthorized("Wrong username/password")
-      content_length = int(self.headers['Content-Length'])
-      post_data = self.rfile.read(content_length)
+      post_data = self._request_data()
       try:
         c = json.loads(post_data)
         car = Car(c['id'], c['name'], c['manufacturer'], c['year'], c['price'])
-        car_db[car.car_id] = car
+        car_db[str(car.car_id)] = car
+        self._send_200("Car created successfully")
+      except json.JSONDecodeError:
+        self._send_400("Invalid JSON format")
       except KeyError:
-        self._send_400()
-        html_content = "<html><body><h1>Missing required field(s)"
-        html_content += "</h1></body></html>"
-        self.wfile.write(bytes(html_content, "utf-8"))
-        return
+        self._send_400("Missing required field(s)")
+      except Exception as e:
+        self._send_400(f"server error: {str(e)}")
       self._send_200()
 
+    @check_authorized
     def do_DELETE(self):
       car_id = self.path.removeprefix('/delete/')
       if car_id not in car_db:
@@ -91,10 +110,10 @@ class SimpleServer(BaseHTTPRequestHandler):
         return 
       del car_db[car_id]
       self._send_200()
-    
+
+    @check_authorized
     def do_PATCH(self):
-      content_length = int(self.headers['Content-Length'])
-      req_data = self.rfile.read(content_length)
+      req_data = self._request_data()
       try:
         c = json.loads(req_data)
         if 'id' not in c:
@@ -110,15 +129,28 @@ class SimpleServer(BaseHTTPRequestHandler):
       self._send_200()
       self.wfile.write(b'car update')
       return
+    
+    def do_PUT(self):
+      try:
+        c = json.loads(post_data)
+        car = Car(c['id'], c['name'], c['manufacturer'], c['year'], c['price'])
+        car_db[car.car_id] = car
+      except KeyError:
+        self._send_400()
+        html_content = "<html><body><h1>Missing required field(s)"
+        html_content += "</h1></body></html>"
+        self.wfile.write(bytes(html_content, "utf-8"))
+        return
+      self._send_200()
 
     
 if __name__ == "__main__":
-    car = Car(1, "Ferrari", "Spider", 2020, 1000000000)
-    car_db[car.car_id] = car
     simple_server = HTTPServer((HOST,PORT), SimpleServer)
-    print(f"Server started on http://{HOST}:{PORT}")
+    SimpleServer.set_api_key('dimik', 'Python')
+    print("Starting server...")
     try:
         simple_server.serve_forever()
     except KeyboardInterrupt:
-        print("\nShutting down the server...")
-        simple_server.server_close()
+        pass
+    simple_server.server_close()
+    print("Server shutting down.")
