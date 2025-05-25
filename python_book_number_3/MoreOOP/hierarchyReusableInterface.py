@@ -15,6 +15,7 @@ class BankAccount:
 class CurrentAccount:
     def __init__(self, initial_balance: int):
         self.account = BankAccount(initial_balance)
+        
     def deposit(self, amount: int):
         self.account.deposit(amount)
 
