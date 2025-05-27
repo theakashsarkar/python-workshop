@@ -28,3 +28,13 @@ if __name__ == "__main__":
     erasablePencil.write()
 
     
+
+    class Pen():
+        def write(self):
+            print('Writing with pen')
+    class Pencil(Pen):
+        def write(self):
+            print('Write with pencil')
+        def erase(self):
+            print('erase with pencil')
+    

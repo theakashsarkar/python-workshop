@@ -7,6 +7,7 @@ class Withdrawable(Protocol):
 class CurrentAccount:
     def __init__(self, initial_balance = 0):
         self.balance = initial_balance
+        
     def deposit(self, amount: int):
         if amount > 0:
             self.balance += amount
